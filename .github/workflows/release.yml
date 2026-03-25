@@ -44,7 +44,7 @@ jobs:
       contents: read
       attestations: write # Needed to generate an artifact attestation for a build
       id-token: write # Needed to mint the OIDC token necessary to request a Sigstore signing certificate
-    runs-on: ${{ contains(matrix.arch, 'arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ contains(matrix.arch, 'arm') && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     timeout-minutes: 120
     env:
       SOURCE_COMMIT: ${{ github.sha }}
