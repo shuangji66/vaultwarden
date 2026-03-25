@@ -41,7 +41,7 @@ defaults:
 jobs:
   build:
     name: Build and Test ${{ matrix.channel }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     # Make warnings errors, this is to prevent warnings slipping through.
     # This is done globally to prevent rebuilds when the RUSTFLAGS env variable changes.
