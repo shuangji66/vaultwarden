@@ -51,8 +51,8 @@ jobs:
       SOURCE_REPOSITORY_URL: "https://github.com/${{ github.repository }}"
     strategy:
       matrix:
-        arch: ["amd64", "arm64", "arm/v7", "arm/v6"]
-        base_image: ["debian","alpine"]
+        arch: ["amd64", "arm64"]
+        base_image: ["debian"]
 
     steps:
       - name: Initialize QEMU binfmt support
