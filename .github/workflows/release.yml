@@ -19,7 +19,6 @@ defaults:
 jobs:
   build-binaries:
     name: Build Vaultwarden (${{ matrix.arch }})
-    # 根据架构选择 Runner：arm64 用 ARM  runner，其他用标准 ubuntu
     runs-on: ${{ contains(matrix.arch, 'arm') && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     timeout-minutes: 90
     permissions:
@@ -33,17 +32,13 @@ jobs:
         base_image: ["debian"]
 
     steps:
-      # 1. 初始化 QEMU (必须步骤：确保在 x86 runner 上能构建 arm64)
-      # 即使在原生 ARM runner 上运行，执行此步骤也是安全的（它会检测并跳过不必要的配置）
       - name: Initialize QEMU binfmt support
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a
         with:
           platforms: "arm64,arm"
 
-      # 2. 设置 Docker Buildx
-      # 保留 max-parallelism = 2 以防止 GitHub Actions OOM (内存溢出)
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd
         with:
           cache-binary: false
           buildkitd-config-inline: |
@@ -52,13 +47,11 @@ jobs:
           driver-opts: |
             network=host
 
-      # 3. 检出代码 (fetch-depth: 0 必须保留，否则无法获取 tag 信息)
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
 
-      # 4. 标准化架构名称
       - name: Normalize architecture string
         env:
           MATRIX_ARCH: ${{ matrix.arch }}
@@ -66,7 +59,6 @@ jobs:
           NORMALIZED_ARCH="${MATRIX_ARCH//\/}"
           echo "NORMALIZED_ARCH=${NORMALIZED_ARCH}" | tee -a "${GITHUB_ENV}"
 
-      # 5. 确定版本号 (增加了对无 Tag 情况的兜底处理)
       - name: Determine Source Version
         run: |
           GIT_EXACT_TAG="$(git describe --tags --abbrev=0 --exact-match 2>/dev/null || true)"
@@ -78,18 +70,13 @@ jobs:
                   echo "SOURCE_VERSION=${GIT_LAST_TAG}-${SOURCE_COMMIT:0:8}" | tee -a "${GITHUB_ENV}"
               else
                   echo "SOURCE_VERSION=dev-${SOURCE_COMMIT:0:8}" | tee -a "${GITHUB_ENV}"
-                  echo "::warning::No git tags found. Using default version."
               fi
           fi
 
-      # 6. 构建并提取二进制文件
-      # 关键修改：
-      # 1. 保留 *.output=type=image,push=false,name-canonical=true,push-by-digest=true 以确保 metadata 正常生成
-      # 2. 保留 *.output=type=local,dest=./output 以获取二进制文件
-      # 3. 移除了 cache-from/to 的 registry 引用，改为空字符串以避免报错，但保留参数结构
+      # 【核心修复】移除了 set 块中的所有注释，只保留合法的 key=value
       - name: Bake and Extract
         id: bake_vw
-        uses: docker/bake-action@82490499d2e5613fcead7e128237ef0b0ea210f7 # v7.0.0
+        uses: docker/bake-action@82490499d2e5613fcead7e128237ef0b0ea210f7
         env:
           SOURCE_COMMIT: ${{ env.SOURCE_COMMIT }}
           SOURCE_VERSION: ${{ env.SOURCE_VERSION }}
@@ -101,23 +88,16 @@ jobs:
           targets: "${{ matrix.base_image }}-multi"
           set: |
             *.platform=linux/${{ matrix.arch }}
-            # 禁用远程缓存引用 (因为没有登录 registry)，防止 buildx 尝试读取不存在的缓存
             *.cache-from=
             *.cache-to=
-            # 核心输出配置：
-            # 1. 输出到本地目录供下载
-            # 2. 生成镜像元数据但不推送 (push=false)，保持构建逻辑完整性
             *.output=type=local,dest=./output
             *.output=type=image,push=false,name-canonical=true,push-by-digest=true
 
-      # 7. 稳健地重命名二进制文件
-      # 原逻辑假设文件一定在 ./output/vaultwarden，这里增加检查
       - name: Rename binaries
         run: |
           echo "Files in output directory:"
           ls -la ./output
           
-          # 查找 vaultwarden 二进制文件 (可能在根目录或子目录)
           BIN_PATH=$(find ./output -name "vaultwarden" -type f | head -n 1)
           
           if [[ -z "$BIN_PATH" ]]; then
@@ -127,11 +107,9 @@ jobs:
           
           echo "Found binary at: $BIN_PATH"
           mv "$BIN_PATH" "./vaultwarden-${{ env.NORMALIZED_ARCH }}"
-          echo "Renamed to: vaultwarden-${{ env.NORMALIZED_ARCH }}"
 
-      # 8. 上传为 Artifact
       - name: Upload binaries as artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: vaultwarden-${{ env.SOURCE_VERSION }}-linux-${{ env.NORMALIZED_ARCH }}-${{ matrix.base_image }}
           path: vaultwarden-${{ env.NORMALIZED_ARCH }}
