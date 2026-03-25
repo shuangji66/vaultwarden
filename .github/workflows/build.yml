@@ -35,6 +35,16 @@ on:
       - "macros/**"
 
   workflow_dispatch:
+    paths:
+      - ".github/workflows/build.yml"
+      - "src/**"
+      - "migrations/**"
+      - "Cargo.*"
+      - "build.rs"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "diesel.toml"
+      - "macros/**"
 
 defaults:
   run:
