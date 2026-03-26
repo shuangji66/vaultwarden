@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm64"]
-        base_image: ["debian:bookworm"]
+        base_image: ["debian"]
 
     steps:
       - name: Initialize QEMU binfmt support
