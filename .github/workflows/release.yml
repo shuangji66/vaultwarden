@@ -19,7 +19,7 @@ defaults:
 jobs:
   build-binaries:
     name: Build Vaultwarden (${{ matrix.arch }})
-    runs-on: ${{ contains(matrix.arch, 'arm') && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
+    runs-on: ${{ contains(matrix.arch, 'arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm64"]
-        base_image: ["debian"]
+        base_image: ["debian:bookworm"]
 
     steps:
       - name: Initialize QEMU binfmt support
